@@ -29,7 +29,7 @@ type AuthChangePassword struct {
 
 type AuthRepository interface {
 	Register(input *AuthRegisterInput) error
-	// Login(input *AuthLoginInput) (*Users, error)
+	Login(input *AuthLoginInput) (*Users, error) 
 	// VerifyEmail(email string) error
 	// ResetPassword(input *AuthResetPasswordInput) error
 	// ChangePassword(input *AuthChangePassword) error

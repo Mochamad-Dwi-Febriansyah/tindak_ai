@@ -1,8 +1,10 @@
 package main
 
 import (
-	"tindak_ai/internal/delivery/http"
+	"os"
 	"tindak_ai/config"
+	"tindak_ai/internal/delivery/http"
+	"tindak_ai/internal/middleware"
 	"tindak_ai/internal/repository"
 	"tindak_ai/internal/usecase"
 
@@ -17,14 +19,23 @@ func main() {
   userUsercase := usecase.NewUserUsecase(userRepo)
 
   authRepo := repository.NewAuthRepository(db)
-  authUsercase := usecase.NewAuthUsecase(authRepo, userRepo)
+
+  jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = "dev-secret" // fallback dev
+	}
+
+  authUsercase := usecase.NewAuthUsecase(authRepo, userRepo, jwtSecret)
   
   r := gin.Default()
   api := r.Group("/api")
+  
+  http.NewAuthHandler(api, authUsercase, jwtSecret)
+
+  api.Use(middleware.JWTMiddleware(jwtSecret))
   http.NewUserHandler(api, userUsercase)
 
-  http.NewAuthHandler(api, authUsercase)
 
  
-  r.Run() // listen and serve on 0.0.0.0:8080
+  r.Run()  
 }

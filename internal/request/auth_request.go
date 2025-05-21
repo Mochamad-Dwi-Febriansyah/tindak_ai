@@ -8,3 +8,8 @@ type AuthRegisterInput struct {
     NumberPhone string  `form:"number_phone" binding:"required"`
     Address     string  `form:"address" binding:"required"` 
 }
+
+type AuthLoginInput struct {
+	 Email       string  `form:"email" binding:"required,email"`
+    Password    string  `form:"password" binding:"required,min=6"`
+}
