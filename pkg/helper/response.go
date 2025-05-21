@@ -108,3 +108,10 @@ func UnauthorizedResponse(c *gin.Context, message string) {
 		"message": message,
 	})
 }
+
+func ForbiddenResponse(c *gin.Context, message string) {
+	c.JSON(http.StatusForbidden, gin.H{
+		"status":  http.StatusForbidden,
+		"message": message,
+	})
+}

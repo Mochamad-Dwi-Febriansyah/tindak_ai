@@ -95,3 +95,15 @@ func (a *AuthUsecase) Login(input *domain.AuthLoginInput) (string, *domain.Users
 func (a *AuthUsecase) GetProfile(userId uuid.UUID) (*domain.Users, error) {
 	return a.userRepo.GetByID(userId)
 }
+
+func (a *AuthUsecase) HasPermission(userId uuid.UUID, action string, resource string) (bool, error) {
+	_, err := a.userRepo.GetByID(userId)
+	if err != nil {
+		return false, fmt.Errorf("failed to get user: %w", err)
+	} 
+	return a.repo.HasPermission(userId, action, resource)
+}
+
+func (a *AuthUsecase) GetUserPermissions(userID uuid.UUID) ([]domain.Permission, error) {
+	return a.repo.GetPermissionsByUserID(userID)
+}

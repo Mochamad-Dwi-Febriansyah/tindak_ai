@@ -1,8 +1,9 @@
 package http
 
 import (
-	"fmt" 
+	"fmt"
 	"tindak_ai/internal/domain"
+	"tindak_ai/internal/middleware"
 	"tindak_ai/internal/request"
 	"tindak_ai/internal/usecase"
 	"tindak_ai/pkg/helper"
@@ -14,18 +15,22 @@ import (
 
 type UserHandler struct {
 	usecase *usecase.UserUsecase
+	authRepo domain.AuthRepository
 }
 
-func NewUserHandler(router *gin.RouterGroup, uc *usecase.UserUsecase) {
-	handler := &UserHandler{usecase: uc}
+func NewUserHandler(router *gin.RouterGroup, uc *usecase.UserUsecase,  authRepo domain.AuthRepository) {
+	handler := &UserHandler{
+		usecase: uc,
+		authRepo: authRepo,
+	}
 
 	userGroup := router.Group("/users")
 	{
-		userGroup.GET("/", handler.GetAllUsers)
-		userGroup.GET("/:id", handler.GetUserByID)
-		userGroup.POST("/", handler.CreateUser)
-		userGroup.PUT("/:id", handler.UpdateUser)
-		userGroup.DELETE("/:id", handler.DeleteUser)
+		userGroup.GET("/", middleware.Authorize(authRepo, "read", "user"), handler.GetAllUsers)
+		userGroup.GET("/:id", middleware.Authorize(authRepo, "show", "user"),handler.GetUserByID)
+		userGroup.POST("/", middleware.Authorize(authRepo, "create", "user"),handler.CreateUser)
+		userGroup.PUT("/:id", middleware.Authorize(authRepo, "update", "user"),handler.UpdateUser)
+		userGroup.DELETE("/:id", middleware.Authorize(authRepo, "delete", "user"),handler.DeleteUser)
 	}
 }
 

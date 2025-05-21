@@ -2,6 +2,7 @@ package http
 
 import (
 	"log"
+	"os"
 	"tindak_ai/internal/domain"
 	"tindak_ai/internal/middleware"
 	"tindak_ai/internal/request"
@@ -30,6 +31,8 @@ func NewAuthHandler(router *gin.RouterGroup, uc *usecase.AuthUsecase, jwtSecret 
 	{
 		protectedAuth.POST("/logout", handler.Logout)
 		protectedAuth.GET("/me", handler.Me)
+		protectedAuth.GET("/permissions", handler.GetUserPermissions)
+		protectedAuth.GET("/permissions/:action/:resource", handler.HasPermission)
 	} 
 }
 
@@ -77,10 +80,10 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		if err == usecase.ErrInvalidCredentials {
 			helper.ValidationFieldErrorResponse(c, "Email", err.Error())
 			return
-		} else if err.Error() == "akun belum terverifikasi" {
+		} else if err == usecase.ErrVerification {
 			helper.ValidationFieldErrorResponse(c, "Email", err.Error())
 			return
-		} else if err.Error() == "akun tidak aktif" {
+		} else if err == usecase.ErrInactive {
 			helper.ValidationFieldErrorResponse(c, "Email", err.Error())
 			return
 		} else{
@@ -146,4 +149,73 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	}
 
 	helper.SuccessResponse(c, "User profile retrieved successfully", user)
+}
+
+func (h *AuthHandler) HasPermission(c *gin.Context) {
+	userIDRaw, exist := c.Get(domain.ContextKeyUserID)
+	if !exist {
+		helper.UnauthorizedResponse(c, "User ID not found in context")
+		return
+	}
+
+	userID, ok := userIDRaw.(string)
+	if !ok {
+		helper.UnauthorizedResponse(c, "Invalid User ID type")
+		return
+	}
+
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		helper.BadRequestResponse(c, "Invalid User ID format")
+		return
+	}
+
+	action := c.Param("action")
+	resource := c.Param("resource")
+
+	hasPermission, err := h.usecase.HasPermission(uid, action, resource)
+	if err != nil {
+		helper.InternalServerErrorResponse(c, err.Error())
+		return
+	}
+
+	if hasPermission { 
+		c.JSON(200, gin.H{"message": true})
+	} else { 
+		c.JSON(403, gin.H{"message": false})
+	}
+}
+
+func (h *AuthHandler) GetUserPermissions(c *gin.Context) {
+	userIDRaw, exist := c.Get(domain.ContextKeyUserID)
+	if !exist {
+		helper.UnauthorizedResponse(c, "User ID not found in context")
+		return
+	}
+
+	userID, ok := userIDRaw.(string)
+	if !ok {
+		helper.UnauthorizedResponse(c, "Invalid User ID type")
+		return
+	}
+
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		helper.BadRequestResponse(c, "Invalid User ID format")
+		return
+	}
+
+	permissions, err := h.usecase.GetUserPermissions(uid)
+	if err != nil {
+		helper.InternalServerErrorResponse(c, err.Error())
+		return
+	}
+
+	appName := os.Getenv("APP_ENV")
+	parsedRespose := make([]string, len(permissions))
+	for i := range permissions {
+		parsedRespose[i] = appName + "."+ permissions[i].Resource + "." + permissions[i].Action
+	} 
+
+	c.JSON(200, gin.H{"permissions": parsedRespose})
 }

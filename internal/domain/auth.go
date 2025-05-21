@@ -30,6 +30,8 @@ type AuthChangePassword struct {
 type AuthRepository interface {
 	Register(input *AuthRegisterInput) error
 	Login(input *AuthLoginInput) (*Users, error) 
+	HasPermission(userID uuid.UUID, action string, resource string) (bool, error)
+	GetPermissionsByUserID(userID uuid.UUID) ([]Permission, error)
 	// VerifyEmail(email string) error
 	// ResetPassword(input *AuthResetPasswordInput) error
 	// ChangePassword(input *AuthChangePassword) error

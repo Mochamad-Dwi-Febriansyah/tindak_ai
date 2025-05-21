@@ -33,6 +33,8 @@ type Users struct {
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
+
+	UserPermissions []UserPermission `gorm:"foreignKey:UserID" json:"-"`
 }
 
 type UserRepository interface {

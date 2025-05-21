@@ -6,6 +6,7 @@ import (
 	"tindak_ai/internal/delivery/http"
 	"tindak_ai/internal/middleware"
 	"tindak_ai/internal/repository"
+	"tindak_ai/internal/seed"
 	"tindak_ai/internal/usecase"
 
 	"github.com/gin-gonic/gin"
@@ -15,6 +16,9 @@ func main() {
   config.InitDB()
 
   db := config.DB
+
+  seed.SeedRoleAndPermission(db)
+
   userRepo := repository.NewUserRepository(db)
   userUsercase := usecase.NewUserUsecase(userRepo)
 
@@ -33,7 +37,7 @@ func main() {
   http.NewAuthHandler(api, authUsercase, jwtSecret)
 
   api.Use(middleware.JWTMiddleware(jwtSecret))
-  http.NewUserHandler(api, userUsercase)
+  http.NewUserHandler(api, userUsercase, authRepo)
 
 
  
