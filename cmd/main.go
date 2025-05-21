@@ -15,10 +15,15 @@ func main() {
   db := config.DB
   userRepo := repository.NewUserRepository(db)
   userUsercase := usecase.NewUserUsecase(userRepo)
+
+  authRepo := repository.NewAuthRepository(db)
+  authUsercase := usecase.NewAuthUsecase(authRepo, userRepo)
   
   r := gin.Default()
   api := r.Group("/api")
   http.NewUserHandler(api, userUsercase)
+
+  http.NewAuthHandler(api, authUsercase)
 
  
   r.Run() // listen and serve on 0.0.0.0:8080
