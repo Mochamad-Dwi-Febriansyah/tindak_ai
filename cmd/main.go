@@ -23,9 +23,7 @@ func main() {
   loggerUsecase := usecase.NewLoggerUsecase(loggerRepo)
 
   userRepo := repository.NewUserRepository(db)
-  userUsercase := usecase.NewUserUsecase(userRepo)
-
-
+  userUsercase := usecase.NewUserUsecase(userRepo)  
   
   jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
@@ -35,9 +33,11 @@ func main() {
   authRepo := repository.NewAuthRepository(db)
   authUsercase := usecase.NewAuthUsecase(authRepo, userRepo, jwtSecret)
 
-
   institutionRepo := repository.NewInstitutionRepository(db)
   institutionUsecase := usecase.NewInstitutionUsecase(institutionRepo)
+
+  userInstitutionRepo := repository.NewUserInstitutionRepository(db)
+  userInstitutionUsecase := usecase.NewUserInstitutionUsecase(userInstitutionRepo, userRepo, institutionRepo)
   
   r := gin.Default()
   api := r.Group("/api")
@@ -48,6 +48,7 @@ func main() {
 
   http.NewUserHandler(api, userUsercase, authRepo, loggerUsecase)
   http.NewInstitutionHandler(api, institutionUsecase, authRepo, loggerUsecase)
+  http.NewUserInstitutionHandler(api, userInstitutionUsecase, authRepo, loggerUsecase)
 
 
  

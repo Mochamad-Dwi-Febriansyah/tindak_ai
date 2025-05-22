@@ -63,6 +63,7 @@ func InitDB() {
 		&domain.UserPermission{}, 
 		&domain.Institution{},
 		&domain.Logging{},
+		&domain.UserInstitution{},
 	)
 
 	DB = db

@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -45,3 +46,6 @@ type UserRepository interface {
 	Delete(id uuid.UUID) error
 	GetByEmail(email string) (*Users, error)
 }
+
+
+var ErrUserNotFound = errors.New("user not found") 
