@@ -19,6 +19,9 @@ func main() {
 
   seed.SeedRoleAndPermission(db)
 
+  loggerRepo := repository.NewLoggerRepository(db)
+  loggerUsecase := usecase.NewLoggerUsecase(loggerRepo)
+
   userRepo := repository.NewUserRepository(db)
   userUsercase := usecase.NewUserUsecase(userRepo)
 
@@ -39,12 +42,12 @@ func main() {
   r := gin.Default()
   api := r.Group("/api")
   
-  http.NewAuthHandler(api, authUsercase, jwtSecret)
+  http.NewAuthHandler(api, authUsercase, loggerUsecase, jwtSecret)
 
   api.Use(middleware.JWTMiddleware(jwtSecret))
 
-  http.NewUserHandler(api, userUsercase, authRepo)
-  http.NewInstitutionHandler(api, institutionUsecase, authRepo)
+  http.NewUserHandler(api, userUsercase, authRepo, loggerUsecase)
+  http.NewInstitutionHandler(api, institutionUsecase, authRepo, loggerUsecase)
 
 
  
