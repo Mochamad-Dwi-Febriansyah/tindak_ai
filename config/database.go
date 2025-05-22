@@ -55,7 +55,7 @@ func InitDB() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	db.AutoMigrate(&domain.Users{}, &domain.Role{}, &domain.Permission{}, &domain.RolePermission{}, &domain.UserPermission{})
+	db.AutoMigrate(&domain.Users{}, &domain.Role{}, &domain.Permission{}, &domain.RolePermission{}, &domain.UserPermission{}, &domain.Institution{})
 
 	DB = db
 }

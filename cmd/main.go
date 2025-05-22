@@ -22,14 +22,19 @@ func main() {
   userRepo := repository.NewUserRepository(db)
   userUsercase := usecase.NewUserUsecase(userRepo)
 
-  authRepo := repository.NewAuthRepository(db)
 
+  
   jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
-		jwtSecret = "dev-secret" // fallback dev
+    jwtSecret = "dev-secret" // fallback dev
 	}
 
+  authRepo := repository.NewAuthRepository(db)
   authUsercase := usecase.NewAuthUsecase(authRepo, userRepo, jwtSecret)
+
+
+  institutionRepo := repository.NewInstitutionRepository(db)
+  institutionUsecase := usecase.NewInstitutionUsecase(institutionRepo)
   
   r := gin.Default()
   api := r.Group("/api")
@@ -37,7 +42,9 @@ func main() {
   http.NewAuthHandler(api, authUsercase, jwtSecret)
 
   api.Use(middleware.JWTMiddleware(jwtSecret))
+
   http.NewUserHandler(api, userUsercase, authRepo)
+  http.NewInstitutionHandler(api, institutionUsecase, authRepo)
 
 
  

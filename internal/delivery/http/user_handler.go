@@ -3,7 +3,7 @@ package http
 import (
 	"fmt"
 	"tindak_ai/internal/domain"
-	"tindak_ai/internal/middleware"
+	// "tindak_ai/internal/middleware"
 	"tindak_ai/internal/request"
 	"tindak_ai/internal/usecase"
 	"tindak_ai/pkg/helper"
@@ -26,11 +26,16 @@ func NewUserHandler(router *gin.RouterGroup, uc *usecase.UserUsecase,  authRepo 
 
 	userGroup := router.Group("/users")
 	{
-		userGroup.GET("/", middleware.Authorize(authRepo, "read", "user"), handler.GetAllUsers)
-		userGroup.GET("/:id", middleware.Authorize(authRepo, "show", "user"),handler.GetUserByID)
-		userGroup.POST("/", middleware.Authorize(authRepo, "create", "user"),handler.CreateUser)
-		userGroup.PUT("/:id", middleware.Authorize(authRepo, "update", "user"),handler.UpdateUser)
-		userGroup.DELETE("/:id", middleware.Authorize(authRepo, "delete", "user"),handler.DeleteUser)
+		userGroup.GET("", handler.GetAllUsers)
+		userGroup.GET("/:id", handler.GetUserByID)
+		userGroup.POST("", handler.CreateUser)
+		userGroup.PUT("/:id",handler.UpdateUser)
+		userGroup.DELETE("/:id", handler.DeleteUser)
+		// userGroup.GET("", middleware.Authorize(authRepo, "read", "user"), handler.GetAllUsers)
+		// userGroup.GET("/:id", middleware.Authorize(authRepo, "show", "user"),handler.GetUserByID)
+		// userGroup.POST("", middleware.Authorize(authRepo, "create", "user"),handler.CreateUser)
+		// userGroup.PUT("/:id", middleware.Authorize(authRepo, "update", "user"),handler.UpdateUser)
+		// userGroup.DELETE("/:id", middleware.Authorize(authRepo, "delete", "user"),handler.DeleteUser)
 	}
 }
 
@@ -50,7 +55,7 @@ func (h *UserHandler) GetUserByID(c *gin.Context) {
 		helper.BadRequestResponse(c, err.Error()) 
 		return 
 	}
-	user, err := h.usecase.GetByIDUsers(id)
+	user, err := h.usecase.GetByIDUser(id)
 	if err != nil {
 		helper.NotFoundResponse(c, err.Error()) 
 		return 
@@ -118,7 +123,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context){
 		return
 	}
 
-	existingUser, err := h.usecase.GetByIDUsers(userId)
+	existingUser, err := h.usecase.GetByIDUser(userId)
 	if err != nil { 
 		helper.NotFoundResponse(c, "user not found")
 		return
@@ -199,7 +204,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context){
 		return
 	}
 
-	existingUser, err := h.usecase.GetByIDUsers(userId)
+	existingUser, err := h.usecase.GetByIDUser(userId)
 	if err != nil { 
 		helper.NotFoundResponse(c, "user not found")
 		return
