@@ -50,7 +50,7 @@ func (h *UserHandler) GetAllUsers(c *gin.Context) {
 		h.logUsecase.Log(
 			domain.MethodTypeGet,
 			domain.LogLevelError,
-			"failed to fetch users",
+			"failed to fetch users :" + err.Error(),
 			"user.GetAllUsers",
 			helper.PtrUUID(uid),
 			c.ClientIP(),
@@ -86,7 +86,7 @@ func (h *UserHandler) GetUserByID(c *gin.Context) {
 		h.logUsecase.Log(
 			domain.MethodTypeGet,
 			domain.LogLevelError,
-			"failed to fetch user",
+			"failed to fetch user :" + err.Error(),
 			"user.GetByIDUser",
 			helper.PtrUUID(uid),
 			c.ClientIP(),
@@ -106,7 +106,7 @@ func (h *UserHandler) GetUserByID(c *gin.Context) {
 		c.Request.UserAgent(),
 		helper.PtrString("{}"),
 	)
-	helper.SuccessResponse(c, "users retrieved successfully", user)
+	helper.SuccessResponse(c, "user retrieved successfully", user)
 }
 
 func (h *UserHandler) CreateUser(c *gin.Context) {

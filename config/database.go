@@ -64,6 +64,10 @@ func InitDB() {
 		&domain.Institution{},
 		&domain.Logging{},
 		&domain.UserInstitution{},
+		&domain.Complaint{},
+		&domain.ComplaintStatusHistory{},
+		&domain.ComplaintRating{},
+		&domain.NewsArticle{},
 	)
 
 	DB = db

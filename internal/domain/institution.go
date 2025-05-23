@@ -25,6 +25,17 @@ type Institution struct {
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
+type InstitutionRating struct {
+	ID uuid.UUID `gorm:"type:char(36);primaryKey" json:"id"`
+	UserID uuid.UUID `gorm:"type:char(36);not null;index" json:"user_id"`
+	InstitutionID *uuid.UUID `gorm:"type:char(36);not null;index" json:"institution_id"`
+	Rating      RatingLevel       `gorm:"type:int;not null" json:"rating"`              // misal 1-5
+	Comment     *string   `gorm:"type:text" json:"comment,omitempty"`           // opsional, komentar rating
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
 type InstitutionRepository interface {
 	GetAll() ([]Institution, error)
 	GetByID(id uuid.UUID) (*Institution, error)

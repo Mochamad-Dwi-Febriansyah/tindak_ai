@@ -150,7 +150,7 @@ func (h *InstitutionHandler) Create(c *gin.Context) {
 				c.Request.UserAgent(),
 				helper.PtrString(string(metaStr)),
 			)
-			helper.InternalServerErrorResponse(c, "failed to save file")
+			helper.InternalServerErrorResponse(c, domain.ErrFailedTosave.Error())
 			return
 		}
 		institution.LogoUrl = &path
@@ -203,7 +203,7 @@ func (h *InstitutionHandler) Update(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
-		helper.BadRequestResponse(c, "invalid UUID")
+		helper.BadRequestResponse(c, domain.ErrInvalidUUID.Error())
 		return
 	}
 
