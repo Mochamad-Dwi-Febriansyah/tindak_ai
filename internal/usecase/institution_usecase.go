@@ -57,3 +57,23 @@ func (u *InstitutionUsecase) DeleteInsitutions(id uuid.UUID) error {
 func (u *InstitutionUsecase) GetInsitutionByEmail(email string) (*domain.Institution, error) {
 	return u.repo.GetByEmail(email)
 }
+
+
+func (u *InstitutionUsecase) GetByIDInsitutionRating(id uuid.UUID) (*domain.InstitutionRating, error) {
+	return u.repo.GetRatingByID(id)
+}
+
+func (u *InstitutionUsecase) AddRating(institutionRating *domain.InstitutionRating) error {
+	return u.repo.AddRating(institutionRating)
+}
+func (u *InstitutionUsecase) UpdateRating(institutionRating *domain.InstitutionRating) error {
+	_, err := u.repo.GetRatingByID(institutionRating.ID)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return domain.ErrInstitutionRatingNotFound
+	}
+	return u.repo.UpdateRating(institutionRating)
+}
+
+func (u *InstitutionUsecase) DeleteRating(id uuid.UUID) error {
+	return u.repo.DeleteRating(id)
+}

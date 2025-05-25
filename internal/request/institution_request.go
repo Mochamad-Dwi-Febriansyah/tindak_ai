@@ -23,3 +23,14 @@ type InstitutionUpdateRequest struct {
 	Latitude     *float64 `form:"latitude"`
 	Longitude    *float64 `form:"longitude"`
 }
+
+type InstitutionRatingCreateRequest struct {
+	InstitutionID string `form:"institution_id" binding:"required"`
+	Rating        int        `form:"rating" binding:"required,min=1,max=5"`
+	Comment       *string    `form:"comment,omitempty"`
+}
+
+type InstitutionRatingUpdateRequest struct {
+	Rating  *int     `form:"rating" binding:"omitempty,min=1,max=5"`
+	Comment *string `form:"comment,omitempty"`
+}

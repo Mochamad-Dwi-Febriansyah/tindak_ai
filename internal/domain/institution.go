@@ -28,7 +28,7 @@ type Institution struct {
 type InstitutionRating struct {
 	ID uuid.UUID `gorm:"type:char(36);primaryKey" json:"id"`
 	UserID uuid.UUID `gorm:"type:char(36);not null;index" json:"user_id"`
-	InstitutionID *uuid.UUID `gorm:"type:char(36);not null;index" json:"institution_id"`
+	InstitutionID uuid.UUID `gorm:"type:char(36);not null;index" json:"institution_id"`
 	Rating      RatingLevel       `gorm:"type:int;not null" json:"rating"`              // misal 1-5
 	Comment     *string   `gorm:"type:text" json:"comment,omitempty"`           // opsional, komentar rating
 	CreatedAt   time.Time `json:"created_at"`
@@ -43,7 +43,13 @@ type InstitutionRepository interface {
 	Update(Institution *Institution) error
 	Delete(id uuid.UUID) error
 	GetByEmail(email string) (*Institution, error)
+
+	GetRatingByID(id uuid.UUID) (*InstitutionRating, error)
+	AddRating(institutionRating *InstitutionRating) error
+	UpdateRating(institutionRating *InstitutionRating) error
+	DeleteRating(id uuid.UUID) error
 }
 
 var ErrInstitutionEmailExists = errors.New("institution email already exists")
 var ErrInstitutionNotFound = errors.New("institution not found")
+var ErrInstitutionRatingNotFound = errors.New("institution rating not found")

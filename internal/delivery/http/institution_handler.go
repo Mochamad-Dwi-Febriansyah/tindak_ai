@@ -35,12 +35,22 @@ func NewInstitutionHandler(router *gin.RouterGroup , uc *usecase.InstitutionUsec
 		institutionGroup.PUT("/:id", handler.Update)
 		institutionGroup.DELETE("/:id",  handler.Delete)
 		institutionGroup.GET("/email",  handler.GetByEmail)
+
+		institutionGroup.GET("/rating/:id",  handler.GetByIDRating)
+		institutionGroup.POST("/rating",  handler.CreateRating)
+		institutionGroup.PUT("/rating/:id",  handler.UpdateRating)
+		institutionGroup.DELETE("/rating/:id",  handler.DeleteRating)
 		// institutionGroup.GET("", middleware.Authorize(authRepo, "read", "institution") ,handler.GetAll)
 		// institutionGroup.GET("/:id", middleware.Authorize(authRepo, "show", "institution"), handler.GetByID)
 		// institutionGroup.POST("", middleware.Authorize(authRepo, "create", "institution"), handler.Create)
 		// institutionGroup.PUT("/:id", middleware.Authorize(authRepo, "update", "institution"), handler.Update)
 		// institutionGroup.DELETE("/:id", middleware.Authorize(authRepo, "delete", "institution"), handler.Delete)
 		// institutionGroup.GET("/email", middleware.Authorize(authRepo, "read_by_email", "institution"), handler.GetByEmail)
+
+		// institutionGroup.GET("/rating/:id", middleware.Authorize(authRepo, "read", "institution-rating"), handler.GetByIDRating)
+		// institutionGroup.POST("/rating", middleware.Authorize(authRepo, "create", "institution-rating"), handler.CreateRating)
+		// institutionGroup.PUT("/rating/:id", middleware.Authorize(authRepo, "update", "institution-rating"), handler.UpdateRating)
+		// institutionGroup.DELETE("/rating/:id", middleware.Authorize(authRepo, "delete", "institution-rating"), handler.DeleteRating)
 	}
 }
 
@@ -294,7 +304,7 @@ func (h *InstitutionHandler) Update(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, domain.ErrInstitutionNotFound) {
-			helper.NotFoundResponse(c, "institution not found")
+			helper.NotFoundResponse(c, domain.ErrInstitutionNotFound.Error())
 			return
 		}
 		meta := map[string]string {
@@ -447,4 +457,255 @@ func (h *InstitutionHandler) GetByEmail(c *gin.Context) {
 		helper.PtrString(string(metaStr)),
 	)
 	helper.SuccessResponse(c, "institution retrieved successfully", institution)
+}
+
+
+// rating
+
+func (h *InstitutionHandler) GetByIDRating(c *gin.Context) {
+	uid := helper.GetUserUUIDFromContext(c)
+	idParams := c.Param("id")
+	id, err := uuid.Parse(idParams)
+	if err != nil {
+		helper.BadRequestResponse(c, err.Error())
+		return
+	} 
+	institutionRating, err := h.usecase.GetByIDInsitutionRating(id)
+	if err != nil {
+		h.logUsecase.Log(
+			domain.MethodTypeGet,
+			domain.LogLevelError,
+			"failed to fetch institution rating",
+			"institution-rating.GetByIDInsitutionRating",
+			helper.PtrUUID(uid),
+			c.ClientIP(),
+			c.Request.UserAgent(),
+			helper.PtrString("{}"),
+		)
+		helper.NotFoundResponse(c, err.Error())
+		return
+	} 
+	h.logUsecase.Log(
+		domain.MethodTypeGet,
+		domain.LogLevelInfo,
+		"institution rating retrieved successfully",
+		"institution-rating.GetByIDInsitution",
+		helper.PtrUUID(uid),
+		c.ClientIP(),
+		c.Request.UserAgent(),
+		helper.PtrString("{}"),
+	)
+	helper.SuccessResponse(c, "institution rating retrieved successfully", institutionRating)
+}
+
+func (h *InstitutionHandler) CreateRating(c *gin.Context) {
+	uid := helper.GetUserUUIDFromContext(c)
+	var req request.InstitutionRatingCreateRequest
+	if err := c.ShouldBind(&req); err != nil {
+		helper.ValidationErrorResponse(c, err)
+		return
+	}  
+
+	institutionid, err := uuid.Parse(req.InstitutionID)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"errors": map[string]string{
+				"InstitutionID": "InstitutionID must be a valid UUID",
+			},
+			"message": "validation error",
+			"status": 400,
+   		 }) 
+		return
+	}
+
+	institutionRating := domain.InstitutionRating{
+		ID: uuid.New(),
+		InstitutionID: institutionid,
+		Rating:  domain.RatingLevel(req.Rating),
+		Comment: req.Comment, 
+		UserID: uid,
+	}
+ 
+
+	err = h.usecase.AddRating(&institutionRating)
+	if  err != nil { 
+		meta := map[string]string {
+			"created_by": uid.String(), 
+		}
+		metaStr, _ := json.Marshal(meta)
+		h.logUsecase.Log(
+			domain.MethodTypePost,
+			domain.LogLevelError,
+			"failed to create institution rating :" + err.Error(),
+			"institution-rating.Create",
+			helper.PtrUUID(uid),
+			c.ClientIP(),
+			c.Request.UserAgent(),
+			helper.PtrString(string(metaStr)),
+		)
+		helper.InternalServerErrorResponse(c, err.Error())
+		return
+	}
+	meta := map[string]string {
+		"created_by": uid.String(), 
+	}
+	metaStr, _ := json.Marshal(meta)
+	h.logUsecase.Log(
+		domain.MethodTypePost,
+		domain.LogLevelInfo,
+		"institution rating created successfully",
+		"institution-rating.Create",
+		helper.PtrUUID(uid),
+		c.ClientIP(),
+		c.Request.UserAgent(),
+		helper.PtrString(string(metaStr)),
+	)
+	helper.CreatedResponse(c, "institution rating created successfully", institutionRating)
+}
+
+func (h *InstitutionHandler) UpdateRating(c *gin.Context) {
+	uid := helper.GetUserUUIDFromContext(c)
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		helper.BadRequestResponse(c, domain.ErrInvalidUUID.Error())
+		return
+	}
+
+	var req request.InstitutionRatingUpdateRequest
+	if err := c.ShouldBind(&req); err != nil {
+		helper.ValidationErrorResponse(c, err)
+		return
+	}
+
+	existingInstitutionRating, err := h.usecase.GetByIDInsitutionRating(id)
+	if err != nil {
+		meta := map[string]string {
+			"updated_by": uid.String(), 
+		}
+		metaStr, _ := json.Marshal(meta)
+		h.logUsecase.Log(
+			domain.MethodTypePut,
+			domain.LogLevelError,
+			"failed to fetch institution rating:" + err.Error(),
+			"institution-rating.GetByIDInsitutionRating",
+			helper.PtrUUID(uid),
+			c.ClientIP(),
+			c.Request.UserAgent(),
+			helper.PtrString(string(metaStr)),
+		)
+		helper.NotFoundResponse(c, "institution rating not found")
+		return
+	}
+
+	if req.Rating != nil {
+		existingInstitutionRating.Rating = domain.RatingLevel(*req.Rating)
+	}
+	if req.Comment != nil {
+		existingInstitutionRating.Comment = req.Comment
+	} 
+ 
+
+	err = h.usecase.UpdateRating(existingInstitutionRating)
+	if err != nil { 
+		if errors.Is(err, domain.ErrInstitutionRatingNotFound) {
+			helper.NotFoundResponse(c, domain.ErrInstitutionRatingNotFound.Error())
+			return
+		}
+		meta := map[string]string {
+			"updated_by": uid.String(), 
+		}
+		metaStr, _ := json.Marshal(meta)
+		h.logUsecase.Log(
+			domain.MethodTypePut,
+			domain.LogLevelError,
+			"failed to update institution rating:" + err.Error(),
+			"institution-rating.Update",
+			helper.PtrUUID(uid),
+			c.ClientIP(),
+			c.Request.UserAgent(),
+			helper.PtrString(string(metaStr)),
+		)
+		helper.InternalServerErrorResponse(c, "failed to update institution rating")
+		return
+	}
+	meta := map[string]string {
+		"updated_by": uid.String(), 
+	}
+	metaStr, _ := json.Marshal(meta)
+	h.logUsecase.Log(
+		domain.MethodTypePut,
+		domain.LogLevelInfo,
+		"institution rating updated successfully",
+		"institution-rating.Update",
+		helper.PtrUUID(uid),
+		c.ClientIP(),
+		c.Request.UserAgent(),
+		helper.PtrString(string(metaStr)),
+	)
+	helper.SuccessResponse(c, "institution updated successfully", existingInstitutionRating)
+}
+
+func (h *InstitutionHandler) DeleteRating(c *gin.Context) {
+	uid := helper.GetUserUUIDFromContext(c)
+	idParams := c.Param("id")
+	id, err := uuid.Parse(idParams)
+	if err != nil {
+		helper.BadRequestResponse(c, err.Error())
+		return
+	}
+	existingInstitutionRating, err := h.usecase.GetByIDInsitutionRating(id)
+	if err != nil {
+		meta := map[string]string {
+			"deleted_by": uid.String(),
+		}
+		metaStr, _ := json.Marshal(meta)
+		h.logUsecase.Log(
+			domain.MethodTypeDelete,
+			domain.LogLevelError,
+			"failed to fetch institution rating",
+			"institution-rating.GetByIDInsitution",
+			helper.PtrUUID(uid),
+			c.ClientIP(),
+			c.Request.UserAgent(),
+			helper.PtrString(string(metaStr)),
+		)
+		helper.NotFoundResponse(c, err.Error())
+		return
+	}
+
+	if err := h.usecase.DeleteRating(id); err != nil {
+		meta := map[string]string {
+			"deleted_by": uid.String(), 
+		}
+		metaStr, _ := json.Marshal(meta)
+		h.logUsecase.Log(
+			domain.MethodTypeDelete,
+			domain.LogLevelError,
+			"failed to delete institution rating",
+			"institution-rating.DeleteRating",
+			helper.PtrUUID(uid),
+			c.ClientIP(),
+			c.Request.UserAgent(),
+			helper.PtrString(string(metaStr)),
+		)
+		helper.InternalServerErrorResponse(c, "failed to delete institution rating")
+		return
+	}	
+	meta := map[string]string {
+		"deleted_by": uid.String(), 
+	}
+	metaStr, _ := json.Marshal(meta)
+	h.logUsecase.Log(
+		domain.MethodTypeDelete,
+		domain.LogLevelInfo,
+		"institution rating deleted successfully",
+		"institution-rating.DeleteInsitutions",
+		helper.PtrUUID(uid),
+		c.ClientIP(),
+		c.Request.UserAgent(),
+		helper.PtrString(string(metaStr)),
+	)
+
+	helper.SuccessResponse(c, "institution rating deleted successfully", existingInstitutionRating)
 }
