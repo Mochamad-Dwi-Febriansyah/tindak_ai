@@ -3,7 +3,7 @@ package http
 import (
 	"encoding/json"
 	"errors"
-	"log"
+	// "log"
 	"tindak_ai/internal/domain"
 	"tindak_ai/internal/request"
 	"tindak_ai/internal/usecase"
@@ -149,7 +149,7 @@ func (h *UserInstitutionHandler) CreateUserInstitution(c *gin.Context) {
 	
 	err = h.usecase.Create(&userInsitution)
 	if  err != nil {
-		log.Print(err)
+		// log.Print(err)
 		if errors.Is(err, domain.ErrUserNotFound) { 
 			helper.NotFoundResponse(c, "user not found")
 			return

@@ -46,6 +46,13 @@ func (s StatusLevel) IsValid() bool {
 	return false
 }
 
+func parseEstimatedAt(estimatedAtStr string) *string {
+	if estimatedAtStr == "" {
+		return nil
+	}
+	return &estimatedAtStr
+}
+
 type Complaint struct {
 	ID uuid.UUID `gorm:"type:char(36);primaryKey" json:"id"`
 	ComplaintNumber string `gorm:"type:varchar(50);uniqueIndex;not null" json:"complaint_number"`
@@ -72,6 +79,8 @@ type Complaint struct {
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
 
 	StatusHistory []ComplaintStatusHistory `gorm:"foreignKey:ComplaintID" json:"status_history,omitempty"`
+	ComplaintRatings []ComplaintRating `gorm:"foreignKey:ComplaintID" json:"ratings,omitempty"`
+
 }
  
 
@@ -100,3 +109,23 @@ type ComplaintRating struct {
 	Complaint Complaint `gorm:"foreignKey:ComplaintID" json:"-"`
 	User      Users     `gorm:"foreignKey:UserID" json:"-"`
 }
+
+
+type ComplaintRepository interface {
+	GetAll() ([]Complaint, error)
+	GetByID(id uuid.UUID) (*Complaint, error)
+	Create(complaint *Complaint) error
+	Update(complaint *Complaint) error
+	Delete(id uuid.UUID) error
+
+	GetByComplaintNumber(cN string) (*Complaint, error)
+ 
+	GetComplaintRatingByID(idComplaintRating uuid.UUID) (*ComplaintRating, error)
+	AddComplaintRating(complaintRating *ComplaintRating) error
+	UpdateComplaintRating(complaintRating *ComplaintRating) error
+	DeleteComplaintRating(idComplaintRating uuid.UUID) error
+}
+
+var ErrComplaintNotFound = errors.New("complaint not found")
+var ErrComplaintRatingNotFound = errors.New("complaint rating not found")
+

@@ -489,7 +489,7 @@ func (h *InstitutionHandler) GetByIDRating(c *gin.Context) {
 		domain.MethodTypeGet,
 		domain.LogLevelInfo,
 		"institution rating retrieved successfully",
-		"institution-rating.GetByIDInsitution",
+		"institution-rating.GetByIDInsitutionRating",
 		helper.PtrUUID(uid),
 		c.ClientIP(),
 		c.Request.UserAgent(),

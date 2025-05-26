@@ -41,6 +41,9 @@ func main() {
 
   newsArticleRepo := repository.NewNewsArticleRepository(db)
   newsArticleUsecase := usecase.NewNewsArticleUsecase(newsArticleRepo)
+
+  complaintRepo := repository.NewComplaintRepository(db)
+  complaintUsecase := usecase.NewComplaintUsecase(complaintRepo, userRepo, institutionRepo)
   
   r := gin.Default()
   api := r.Group("/api")
@@ -53,6 +56,7 @@ func main() {
   http.NewInstitutionHandler(api, institutionUsecase, authRepo, loggerUsecase)
   http.NewUserInstitutionHandler(api, userInstitutionUsecase, authRepo, loggerUsecase)
   http.NewNewsArticleHandler(api, newsArticleUsecase, authRepo, loggerUsecase)
+  http.NewComplaintHandler(api, complaintUsecase, authRepo, loggerUsecase)
 
 
 
