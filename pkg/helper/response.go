@@ -100,3 +100,18 @@ func ValidationFieldErrorResponse(c *gin.Context, field string, message string) 
 		"errors":  errors,
 	})
 }
+
+
+func UnauthorizedResponse(c *gin.Context, message string) {
+	c.JSON(http.StatusUnauthorized, gin.H{
+		"status":  http.StatusUnauthorized,
+		"message": message,
+	})
+}
+
+func ForbiddenResponse(c *gin.Context, message string) {
+	c.JSON(http.StatusForbidden, gin.H{
+		"status":  http.StatusForbidden,
+		"message": message,
+	})
+}

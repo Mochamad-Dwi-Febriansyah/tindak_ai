@@ -18,7 +18,7 @@ func (u *UserUsecase) GetAllUsers() ([]domain.Users, error) {
 	return u.repo.GetAll()
 }
 
-func (u *UserUsecase) GetByIDUsers(id uuid.UUID) (*domain.Users, error) {
+func (u *UserUsecase) GetByIDUser(id uuid.UUID) (*domain.Users, error) {
 	return u.repo.GetByID(id)
 } 
 
