@@ -17,7 +17,8 @@ func main() {
 
   db := config.DB
 
-  seed.SeedRoleAndPermission(db)
+  // seed.SeedRoleAndPermission(db)
+  seed.SeedInstitution(db)
 
   loggerRepo := repository.NewLoggerRepository(db)
   loggerUsecase := usecase.NewLoggerUsecase(loggerRepo)
