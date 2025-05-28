@@ -1,6 +1,10 @@
 package domain
 
-import "github.com/google/uuid"
+import (
+	"context"
+	"time" 
+	"github.com/google/uuid"
+)
 
 type AuthLoginInput struct {
 	Email string
@@ -32,6 +36,9 @@ type AuthRepository interface {
 	Login(input *AuthLoginInput) (*Users, error) 
 	HasPermission(userID uuid.UUID, action string, resource string) (bool, error)
 	GetPermissionsByUserID(userID uuid.UUID) ([]Permission, error)
+	UpdateLastLogin(ctx context.Context, userID uuid.UUID, t time.Time) error
+	FindByEmail(ctx context.Context, email string) (*Users, error)
+	CreateByGoogle(ctx context.Context, user *Users) error
 	// VerifyEmail(email string) error
 	// ResetPassword(input *AuthResetPasswordInput) error
 	// ChangePassword(input *AuthChangePassword) error

@@ -1,7 +1,10 @@
 package http
 
-import (
+import ( 
+	"log"
+	"net/http"
 	"os"
+	"tindak_ai/config"
 	"tindak_ai/internal/domain"
 	"tindak_ai/internal/middleware"
 	"tindak_ai/internal/request"
@@ -10,6 +13,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"google.golang.org/api/oauth2/v2"
 )
 
 type AuthHandler struct {
@@ -26,7 +30,10 @@ func NewAuthHandler(router *gin.RouterGroup, uc *usecase.AuthUsecase, logUc *use
 	publicAuth := router.Group("/auth")
 	{
 		publicAuth.POST("/register", handler.Register)
-		publicAuth.POST("/login", handler.Login)
+		publicAuth.POST("/login", handler.Login) 
+
+		publicAuth.GET("/google/login", handler.LoginByGoogle)
+		publicAuth.GET("/google/callback", handler.HandleGoogleCallback)
 	} 
 
 	protectedAuth := router.Group("/auth")
@@ -338,4 +345,104 @@ func (h *AuthHandler) GetUserPermissions(c *gin.Context) {
 	} 
 
 	c.JSON(200, gin.H{"permissions": parsedRespose})
+}
+
+func (h *AuthHandler) LoginByGoogle(c *gin.Context) {
+	url := config.GoogleOAuthConfig.AuthCodeURL("state_string")
+	log.Print(os.Getenv("GOOGLE_CLIENT_ID"))
+	log.Print(os.Getenv("GOOGLE_CLIENT_SECRET"))
+	log.Print(os.Getenv("GOOGLE_REDIRECT_URL")) 
+	c.Redirect(http.StatusTemporaryRedirect, url)
+}
+
+func (h *AuthHandler) HandleGoogleCallback(c *gin.Context) {
+	ctx := c.Request.Context()
+ 
+	code := c.Query("code")
+	if code == "" {
+		helper.BadRequestResponse(c, "code parameter is missing")
+		return
+	}
+
+	token, err := config.GoogleOAuthConfig.Exchange(ctx, code)
+	if err != nil {
+		h.logUsecase.Log(
+				domain.MethodTypeGet,
+				domain.LogLevelError,
+				"OAuth2 code exchange failed: "+err.Error(),
+				"auth-google.login",
+				helper.PtrUUID(uuid.Nil),
+				c.ClientIP(),
+				c.Request.UserAgent(), 
+				helper.PtrString("{}"),
+			)
+		helper.InternalServerErrorResponse(c, "code exchange failed") 
+		return
+	}
+
+	client := config.GoogleOAuthConfig.Client(ctx, token)
+	oauth2Service, err := oauth2.New(client)
+	if err != nil { 
+			h.logUsecase.Log(
+				domain.MethodTypeGet,
+				domain.LogLevelError,
+				"Failed to create OAuth2 client: "+err.Error(),
+				"auth-google.login",
+				helper.PtrUUID(uuid.Nil),
+				c.ClientIP(),
+				c.Request.UserAgent(), 
+				helper.PtrString("{}"),
+			)
+		helper.InternalServerErrorResponse(c, "internal error") 
+		return
+	} 
+	userInfo, err := oauth2Service.Userinfo.Get().Do()
+	if err != nil {
+			h.logUsecase.Log(
+				domain.MethodTypeGet,
+				domain.LogLevelError,
+				"Failed to fetch user info from Google API: "+err.Error(),
+				"auth-google.login",
+				helper.PtrUUID(uuid.Nil),
+				c.ClientIP(),
+				c.Request.UserAgent(), 
+				helper.PtrString("{}"),
+			)
+		helper.InternalServerErrorResponse(c, "failed to fetch user info") 
+		return
+	}
+
+	jwtToken, err := h.usecase.LoginWithGoogle(ctx, userInfo)
+	if err != nil {
+		helper.UnauthorizedResponse(c, "login failed") 
+		return
+	}
+
+		c.SetCookie(
+		"jwt_token",      // cookie name
+		jwtToken,            // value
+		3600*1,          // maxAge 24 jam (detik)
+		"/",              // path
+		"",               // domain (kosong = current domain)
+		true,             // secure (true kalau pakai https)
+		true,             // httpOnly (tidak bisa diakses JS)
+	)
+
+	h.logUsecase.Log(
+		domain.MethodTypePost,
+		domain.LogLevelInfo,
+		"user logged in successfully",
+		"auth-google.login",
+		nil,
+		c.ClientIP(),
+		c.Request.UserAgent(), 
+		helper.PtrString("{}"),
+	)
+ 
+	responseData := gin.H{
+		"token": jwtToken,
+		"user":  userInfo,
+	}
+
+	helper.SuccessResponse(c, "User logged in successfully", responseData)
 }

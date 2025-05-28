@@ -2,3 +2,5 @@
 !.env.example
 
 /uploads/
+
+/tmp/gorm.log

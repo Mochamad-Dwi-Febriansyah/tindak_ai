@@ -1,7 +1,9 @@
 package repository
 
-import ( 
+import (
 	// "log"
+	"context"
+	"time"
 	"tindak_ai/internal/domain"
 
 	"github.com/google/uuid"
@@ -61,3 +63,25 @@ func (r *AuthRepository) GetPermissionsByUserID(userID uuid.UUID) ([]domain.Perm
 	}
 	return permissions, nil
 }
+
+func (r *AuthRepository) Create(ctx context.Context, user *domain.Users) error {
+    return r.db.WithContext(ctx).Create(user).Error
+}
+
+func (r *AuthRepository) UpdateLastLogin(ctx context.Context, userID uuid.UUID, t time.Time) error {
+    return r.db.WithContext(ctx).Model(&domain.Users{}).Where("id = ?", userID).
+        Update("last_login_at", t).Error
+}
+
+func (r *AuthRepository) FindByEmail(ctx context.Context, email string) (*domain.Users, error) {
+    var user domain.Users
+    if err := r.db.WithContext(ctx).Where("email = ?", email).First(&user).Error; err != nil {
+        return nil, err
+    }
+    return &user, nil
+}
+
+func (r *AuthRepository) CreateByGoogle(ctx context.Context, user *domain.Users) error {
+    return r.db.WithContext(ctx).Create(user).Error
+}
+ 

@@ -1,16 +1,22 @@
 package usecase
 
 import (
+	"context" 
 	"errors"
 	"fmt"
 
 	// "log"
 	"time"
 	"tindak_ai/internal/domain"
+	service "tindak_ai/internal/usecase/token"
 
-	"github.com/golang-jwt/jwt/v5"
+	// "github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
+
+	// "golang.org/x/oauth2"
+	ggoogle "google.golang.org/api/oauth2/v2"
 )
 
 var ErrEmailExists = errors.New("email already in use")
@@ -21,14 +27,16 @@ var ErrInactive = errors.New("account is inactive")
 type AuthUsecase struct {
 	repo domain.AuthRepository
 	userRepo  domain.UserRepository
-	jwtSecret string
+	jwtSecret string 
+	tokenService service.TokenService
 }
 
-func NewAuthUsecase(repo domain.AuthRepository, userRepo domain.UserRepository, jwtSecret string) *AuthUsecase {
+func NewAuthUsecase(repo domain.AuthRepository, userRepo domain.UserRepository, jwtSecret string, tokenService service.TokenService) *AuthUsecase {
 	return &AuthUsecase{
 		repo: repo,
 		userRepo: userRepo,
 		jwtSecret: jwtSecret,
+		tokenService: tokenService,
 	}
 }
 
@@ -72,16 +80,18 @@ func (a *AuthUsecase) Login(input *domain.AuthLoginInput) (string, *domain.Users
 		return "", nil, ErrInvalidCredentials
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id": user.ID,
-		"email":   user.Email,
-		"exp":     jwt.NewNumericDate(time.Now().Add(24 * time.Hour)).Unix(),
-	})
+	// token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+	// 	"user_id": user.ID,
+	// 	"email":   user.Email,
+	// 	"exp":     jwt.NewNumericDate(time.Now().Add(24 * time.Hour)).Unix(),
+	// })
 
-	tokenString, err := token.SignedString([]byte(a.jwtSecret))
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to sign token: %w", err)
-	}
+	// tokenString, err := token.SignedString([]byte(a.jwtSecret))
+	// if err != nil {
+	// 	return "", nil, fmt.Errorf("failed to sign token: %w", err)
+	// }
+
+	tokenString, err := a.tokenService.Generate(user)
 
 	now := time.Now()
 	user.LastLoginAt = &now
@@ -106,4 +116,41 @@ func (a *AuthUsecase) HasPermission(userId uuid.UUID, action string, resource st
 
 func (a *AuthUsecase) GetUserPermissions(userID uuid.UUID) ([]domain.Permission, error) {
 	return a.repo.GetPermissionsByUserID(userID)
+}
+
+func (a *AuthUsecase) LoginWithGoogle(ctx context.Context, userInfo *ggoogle.Userinfo) (string, error) {
+    user, err := a.repo.FindByEmail(ctx, userInfo.Email)
+    if err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            // register otomatis jika belum ada
+            newUser := &domain.Users{
+                ID:           uuid.New(),
+                FullName:     userInfo.Name,
+                Email:        userInfo.Email,
+				Gender: "other",
+                AvatarUrl:    &userInfo.Picture,
+                AuthProvider: ptr("google"),
+                IsVerified:   true,
+                IsActive:     true,
+            }
+            if err := a.repo.CreateByGoogle(ctx, newUser); err != nil {
+                return "", err
+            }
+            user = newUser
+        } else {
+            return "", err
+        }
+    }
+
+    now := time.Now()
+    user.LastLoginAt = &now
+    _ = a.repo.UpdateLastLogin(ctx, user.ID, now)
+
+    // generate JWT
+    token, err := a.tokenService.Generate(user)
+    return token, err
+}
+
+func ptr(s string) *string {
+    return &s
 }

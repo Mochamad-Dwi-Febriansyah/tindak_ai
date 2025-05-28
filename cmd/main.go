@@ -8,12 +8,17 @@ import (
 	"tindak_ai/internal/repository"
 	"tindak_ai/internal/seed"
 	"tindak_ai/internal/usecase"
+	service "tindak_ai/internal/usecase/token"
 
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
   config.InitDB()
+
+  config.InitGoogleOAuth()
+
+  serviceJwt := service.NewJWTService(os.Getenv("JWT_SECRET"))
 
   db := config.DB
 
@@ -32,7 +37,7 @@ func main() {
 	}
 
   authRepo := repository.NewAuthRepository(db)
-  authUsercase := usecase.NewAuthUsecase(authRepo, userRepo, jwtSecret)
+  authUsercase := usecase.NewAuthUsecase(authRepo, userRepo, jwtSecret, serviceJwt)
 
   institutionRepo := repository.NewInstitutionRepository(db)
   institutionUsecase := usecase.NewInstitutionUsecase(institutionRepo)
