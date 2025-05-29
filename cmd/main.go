@@ -8,8 +8,10 @@ import (
 	"tindak_ai/internal/repository"
 	"tindak_ai/internal/seed"
 	"tindak_ai/internal/usecase"
-	service "tindak_ai/internal/usecase/token"
+	service "tindak_ai/internal/usecase/token" 
+	"tindak_ai/pkg/mailer"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,6 +21,14 @@ func main() {
   config.InitGoogleOAuth()
 
   serviceJwt := service.NewJWTService(os.Getenv("JWT_SECRET"))
+
+  smtpMailer := &mailer.SMTPMailer{
+		Host:     os.Getenv("SMTP_HOST"),     // contoh: smtp.gmail.com
+		Port:     os.Getenv("SMTP_PORT"),     // contoh: 587
+		Username: os.Getenv("SMTP_USERNAME"), // akun email
+		Password: os.Getenv("SMTP_PASSWORD"), // app password
+		From:     os.Getenv("SMTP_FROM"),     // email pengirim
+	} 
 
   db := config.DB
 
@@ -36,8 +46,10 @@ func main() {
     jwtSecret = "dev-secret" // fallback dev
 	}
 
+  passwordResetRepo := repository.NewPasswordResetRepository(db)
+
   authRepo := repository.NewAuthRepository(db)
-  authUsercase := usecase.NewAuthUsecase(authRepo, userRepo, jwtSecret, serviceJwt)
+  authUsercase := usecase.NewAuthUsecase(authRepo, userRepo, jwtSecret, serviceJwt, passwordResetRepo, smtpMailer)
 
   institutionRepo := repository.NewInstitutionRepository(db)
   institutionUsecase := usecase.NewInstitutionUsecase(institutionRepo)
@@ -52,10 +64,20 @@ func main() {
   complaintUsecase := usecase.NewComplaintUsecase(complaintRepo, userRepo, institutionRepo)
   
   r := gin.Default()
+
+  r.Use(cors.New(cors.Config{
+    AllowOrigins:     []string{"http://localhost:3000"}, // sesuaikan dengan frontend kamu
+    AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+    AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+    ExposeHeaders:    []string{"Content-Length"},
+    AllowCredentials: true,
+  }))
+
   api := r.Group("/api")
   
   http.NewAuthHandler(api, authUsercase, loggerUsecase, jwtSecret)
 
+  
   api.Use(middleware.JWTMiddleware(jwtSecret))
 
   http.NewUserHandler(api, userUsercase, authRepo, loggerUsecase)
@@ -66,6 +88,7 @@ func main() {
 
 
 
+  r.Static("/uploads", "./uploads")
  
   r.Run()  
 }

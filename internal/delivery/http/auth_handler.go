@@ -1,7 +1,7 @@
 package http
 
-import ( 
-	"log"
+import (
+	"errors"
 	"net/http"
 	"os"
 	"tindak_ai/config"
@@ -34,6 +34,10 @@ func NewAuthHandler(router *gin.RouterGroup, uc *usecase.AuthUsecase, logUc *use
 
 		publicAuth.GET("/google/login", handler.LoginByGoogle)
 		publicAuth.GET("/google/callback", handler.HandleGoogleCallback)
+
+		publicAuth.POST("/forgot-password", handler.ForgotPassword)
+		publicAuth.POST("/reset-password", handler.ResetPassword)
+
 	} 
 
 	protectedAuth := router.Group("/auth")
@@ -117,7 +121,11 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	token, user, err := h.usecase.Login(&input)
 	if err != nil {
-		if err == usecase.ErrInvalidCredentials || err == usecase.ErrInactive  || err == usecase.ErrVerification {
+		if err == usecase.ErrInvalidCredentials {
+			helper.BadRequestResponse(c, usecase.ErrInvalidCredentials.Error())
+			return
+		}
+		if  err == usecase.ErrInactive  || err == usecase.ErrVerification {
 			h.logUsecase.Log(
 				domain.MethodTypePost,
 				domain.LogLevelWarn,
@@ -348,10 +356,7 @@ func (h *AuthHandler) GetUserPermissions(c *gin.Context) {
 }
 
 func (h *AuthHandler) LoginByGoogle(c *gin.Context) {
-	url := config.GoogleOAuthConfig.AuthCodeURL("state_string")
-	log.Print(os.Getenv("GOOGLE_CLIENT_ID"))
-	log.Print(os.Getenv("GOOGLE_CLIENT_SECRET"))
-	log.Print(os.Getenv("GOOGLE_REDIRECT_URL")) 
+	url := config.GoogleOAuthConfig.AuthCodeURL("state_string") 
 	c.Redirect(http.StatusTemporaryRedirect, url)
 }
 
@@ -439,10 +444,94 @@ func (h *AuthHandler) HandleGoogleCallback(c *gin.Context) {
 		helper.PtrString("{}"),
 	)
  
-	responseData := gin.H{
-		"token": jwtToken,
-		"user":  userInfo,
+	// responseData := gin.H{
+	// 	"token": jwtToken,
+	// 	"user":  userInfo,
+	// }
+
+	// helper.SuccessResponse(c, "User logged in successfully", responseData)
+	c.Redirect(http.StatusTemporaryRedirect, os.Getenv("FRONTEND_URL")+"/auth/google/callback")
+
+}
+
+
+func (h *AuthHandler) ForgotPassword(c *gin.Context) {
+	var req request.ForgotPasswordInput
+	if err := c.ShouldBind(&req); err != nil {
+		helper.ValidationErrorResponse(c, err)
+		return
 	}
 
-	helper.SuccessResponse(c, "User logged in successfully", responseData)
+	err := h.usecase.SendResetPasswordEmail(req.Email)
+	if err != nil {
+		if errors.Is(err, domain.ErrResetTokenNotFound){
+			helper.NotFoundResponse(c, domain.ErrResetTokenNotFound.Error())
+		}
+		if errors.Is(err, domain.ErrResetTokenExpired){
+			helper.BadRequestResponse(c, domain.ErrResetTokenExpired.Error())
+		}
+		if errors.Is(err, domain.ErrUserNotFound){
+			helper.BadRequestResponse(c, domain.ErrUserNotFound.Error())
+		}
+		h.logUsecase.Log(
+			domain.MethodTypePost,
+			domain.LogLevelError,
+			"failed to send reset password email: "+err.Error(),
+			"auth.forgot_password",
+			helper.PtrUUID(uuid.Nil),
+			c.ClientIP(),
+			c.Request.UserAgent(),
+			helper.PtrString("{}"),
+		)
+		helper.InternalServerErrorResponse(c, err.Error())
+		return
+	}
+
+	h.logUsecase.Log(
+		domain.MethodTypePost,
+		domain.LogLevelInfo,
+		"reset password email sent to "+req.Email,
+		"auth.forgot_password",
+		helper.PtrUUID(uuid.Nil),
+		c.ClientIP(),
+		c.Request.UserAgent(),
+		helper.PtrString("{}"),
+	)
+	helper.SuccessResponse(c, "Reset password link sent to email", nil)
+}
+
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var req request.ResetPasswordInput
+	if err := c.ShouldBind(&req); err != nil {
+		helper.ValidationErrorResponse(c, err)
+		return
+	}
+
+	err := h.usecase.ResetPassword(req.Token, req.NewPassword)
+	if err != nil {
+		h.logUsecase.Log(
+			domain.MethodTypePost,
+			domain.LogLevelError,
+			"failed to reset password: "+err.Error(),
+			"auth.reset_password",
+			helper.PtrUUID(uuid.Nil),
+			c.ClientIP(),
+			c.Request.UserAgent(),
+			helper.PtrString("{}"),
+		)
+		helper.BadRequestResponse(c, err.Error())
+		return
+	}
+
+	h.logUsecase.Log(
+		domain.MethodTypePost,
+		domain.LogLevelInfo,
+		"password reset successfully",
+		"auth.reset_password",
+		helper.PtrUUID(uuid.Nil),
+		c.ClientIP(),
+		c.Request.UserAgent(),
+		helper.PtrString("{}"),
+	)
+	helper.SuccessResponse(c, "Password has been reset", nil)
 }

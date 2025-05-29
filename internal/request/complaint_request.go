@@ -3,7 +3,7 @@ package request
 type ComplaintCreateRequest struct {
 	// ComplaintNumber string  `form:"complaint_number" binding:"required"`
 	UserID          string  `form:"user_id"`
-	InstitutionID   *string  `form:"institution_id" binding:"required"`
+	InstitutionID   *string  `form:"institution_id"  `
 	Title           string  `form:"title" binding:"required"`
 	Description     string  `form:"description" binding:"required"` 
 	Location        *string `form:"location"`

@@ -16,8 +16,7 @@ const (
 	StatusLevelRejected StatusLevel = "rejected"
 	StatusLevelDone   StatusLevel = "done"
 	StatusLevelWithdrawn  StatusLevel = "withdrawn"
-)
-
+) 
 type RatingLevel int
 
 const (
@@ -57,7 +56,7 @@ type Complaint struct {
 	ID uuid.UUID `gorm:"type:char(36);primaryKey" json:"id"`
 	ComplaintNumber string `gorm:"type:varchar(50);uniqueIndex;not null" json:"complaint_number"`
 	UserID uuid.UUID `gorm:"type:char(36);not null;index" json:"user_id"`
-	InstitutionID *uuid.UUID `gorm:"type:char(36);not null;index" json:"institution_id"`
+	InstitutionID *uuid.UUID `gorm:"type:char(36);index" json:"institution_id"`
 
 	Title     string         `gorm:"type:varchar(255)" json:"title"`
 	Description      string         `gorm:"type:text" json:"description"`

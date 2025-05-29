@@ -13,3 +13,12 @@ type AuthLoginInput struct {
 	 Email       string  `form:"email" binding:"required,email"`
     Password    string  `form:"password" binding:"required,min=6"`
 }
+
+type ForgotPasswordInput struct {
+	Email string `form:"email" binding:"required,email"`
+}
+
+type ResetPasswordInput struct {
+	Token       string `form:"token" binding:"required"`
+	NewPassword string `form:"new_password" binding:"required,min=6"`
+}

@@ -38,6 +38,7 @@ func (u *ComplaintUsecase) CreateComplaint(complaint *domain.Complaint) error {
 		}
 		return err
 	}
+	if complaint.InstitutionID != nil {
 		_, err = u.institutionRepo.GetByID(*complaint.InstitutionID) 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -45,6 +46,7 @@ func (u *ComplaintUsecase) CreateComplaint(complaint *domain.Complaint) error {
 		}
 		return err
 	} 
+	}
 	return u.repo.Create(complaint)
 }
 

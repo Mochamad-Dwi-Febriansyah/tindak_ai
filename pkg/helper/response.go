@@ -2,6 +2,7 @@ package helper
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -73,7 +74,7 @@ func ValidationErrorResponse(c *gin.Context, err error) {
             default:
                 msg = field + " is not valid"
             }
-            errors[field] = msg
+            errors[strings.ToLower(field)] = msg
         }
         c.JSON(http.StatusBadRequest, gin.H{
             "status":  http.StatusBadRequest,

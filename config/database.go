@@ -69,6 +69,7 @@ func InitDB() {
 		&domain.ComplaintRating{},
 		&domain.NewsArticle{},
 		&domain.InstitutionRating{},
+		&domain.PasswordResetTokenModel{},
 	)
 
 	DB = db

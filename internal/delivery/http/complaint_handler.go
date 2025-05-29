@@ -175,24 +175,29 @@ func (h *ComplaintHandler) Create(c *gin.Context) {
 	// 	return
 	// }
 
-	institutionID, err := uuid.Parse(*req.InstitutionID)
-	if err != nil {
-		c.JSON(400, gin.H{
-			"errors": map[string]string{
-				"InstitutionID": "InstitutionID must be a valid UUID",
-			},
-			"message": "validation error",
-			"status": 400,
-   		 }) 
-		return
+	var institutionID *uuid.UUID
+	if req.InstitutionID != nil && *req.InstitutionID != "" {
+		parsedID, err := uuid.Parse(*req.InstitutionID)
+		if err != nil {
+			c.JSON(400, gin.H{
+				"errors": map[string]string{
+					"institution_id": "InstitutionID must be a valid UUID",
+				},
+				"message": "validation error",
+				"status": 400,
+			})
+			return
+		}
+		institutionID = &parsedID
 	}
+
 
 	complaint := domain.Complaint{
 		ID: uuid.New(),  
 		// UserID:   userID,
 		ComplaintNumber : helper.GenerateComplaintNumber(),
 		UserID:   uid,
-		InstitutionID: &institutionID,
+		InstitutionID: institutionID,
 		Title : req.Title,
 		Description : req.Description,
 		Location : req.Location,
